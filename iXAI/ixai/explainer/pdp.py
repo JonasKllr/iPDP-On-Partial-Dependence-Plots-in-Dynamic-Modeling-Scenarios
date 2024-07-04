@@ -188,10 +188,18 @@ class IncrementalPDP(BaseIncrementalExplainer):
         axis.set_ylabel(y_label)
         xlim_lower = x_min
         if x_min is None:
-            xlim_lower = np.min(pdp_x) * 0.95
+            min_x = np.min(pdp_x)
+            if min_x < 0:
+                xlim_lower = -(abs(min_x) * 1.05)
+            else:
+                xlim_lower = min_x * 0.95
         xlim_upper = x_max
         if x_max is None:
-            xlim_upper = np.max(pdp_x) * 1.05
+            max_x = np.max(pdp_x)
+            if max_x < 0:
+                xlim_upper = -(abs(max_x) * 0.95)
+            else:
+                xlim_upper = max_x * 1.05
 
         axis.set_xlim((xlim_lower, xlim_upper))
         dist_axis.set_xlim((xlim_lower, xlim_upper))
@@ -333,10 +341,18 @@ class BatchPDP:
         axis.set_ylabel(y_label)
         xlim_lower = x_min
         if x_min is None:
-            xlim_lower = np.min(mean_x) * 0.95
+            min_x = np.min(self.pdp_values_x)
+            if min_x < 0:
+                xlim_lower = -(abs(min_x) * 1.05)
+            else:
+                xlim_lower = min_x * 0.95
         xlim_upper = x_max
         if x_max is None:
-            xlim_upper = np.max(mean_x) * 1.05
+            max_x = np.max(self.pdp_values_x)
+            if max_x < 0:
+                xlim_upper = -(abs(max_x) * 0.95)
+            else:
+                xlim_upper = max_x * 1.05
 
         axis.set_xlim((xlim_lower, xlim_upper))
         dist_axis.set_xlim((xlim_lower, xlim_upper))
