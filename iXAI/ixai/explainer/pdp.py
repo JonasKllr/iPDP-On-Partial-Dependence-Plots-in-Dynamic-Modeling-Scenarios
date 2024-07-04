@@ -256,6 +256,8 @@ class BatchPDP:
         self.ice_curves_y = []
         self.ice_curves_x = []
         self.output_key = output_key
+        self.pdp_values_x = np.empty(gridsize)
+        self.pdp_values_y = np.empty(gridsize)
 
     @property
     def pdp(self):
@@ -283,6 +285,7 @@ class BatchPDP:
         max_value = np.max(x_data[self.pdp_feature])
         feature_grid_values = np.linspace(start=min_value, stop=max_value, num=self.gridsize)
         for x_i in x_data.to_dict('records'):
+            self._storage.update(x_i)
             predictions = np.empty(shape=self.gridsize)
             for i, sampled_feature in enumerate(feature_grid_values):
                 try:
@@ -291,6 +294,16 @@ class BatchPDP:
                     prediction = self.model_function({**x_i, self.pdp_feature: sampled_feature})
                 predictions[i] = prediction
             self._add_ice_curve_to_storage(predictions, feature_grid_values)
+        
+        self._calculate_pdp_function()
+
+    def _calculate_pdp_function(self):
+        ice_curves_x = np.asarray(self.ice_curves_x)
+        ice_curves_y = np.asarray(self.ice_curves_y)
+
+        self.pdp_values_x = np.mean(ice_curves_x, axis=0)
+        self.pdp_values_y = np.mean(ice_curves_y, axis=0)
+
 
     def plot_pdp(self, title: str = None,  x_min=None, x_max=None, y_max=None, y_min=None,
                  return_plot=False, n_ice_curves_prop: float = 1., xticks=None, xticklabels=None,
@@ -303,34 +316,36 @@ class BatchPDP:
         n_ice_curves: int = int(len(ice_curves_x) * n_ice_curves_prop)
         idx = np.round(np.linspace(0, n_ice_curves - 1, n_ice_curves)).astype(int)
 
-        mean_x = np.mean(ice_curves_x, axis=0)
-        ice_curves_y = np.asarray(self.ice_curves_y)
-        mean_y = np.mean(ice_curves_y, axis=0)
+        # mean_x = np.mean(ice_curves_x, axis=0)
+        # ice_curves_y = np.asarray(self.ice_curves_y)
+        # mean_y = np.mean(ice_curves_y, axis=0)
 
-        ice_curves_x = ice_curves_x[idx]
-        ice_curves_y = ice_curves_y[idx]
+        # ice_curves_x = ice_curves_x[idx]
+        # ice_curves_y = ice_curves_y[idx]
 
-        alphas = [1.0] * len(ice_curves_x)
+        # alphas = [1.0] * len(ice_curves_x)
 
         fig, (axis, dist_axis) = plt.subplots(2, 1, height_ratios=(15, 1), figsize=figsize)
 
-        if show_ice_curves:
-            for ice_curve_x, ice_curve_y, alpha in zip(ice_curves_x, ice_curves_y, alphas):
-                axis.plot(ice_curve_x, ice_curve_y, ls='-', c='black', alpha=alpha, linewidth=1)
-            axis.plot([], [], ls='-', c='black', label="ICE")
+        # if show_ice_curves:
+        #     for ice_curve_x, ice_curve_y, alpha in zip(ice_curves_x, ice_curves_y, alphas):
+        #         axis.plot(ice_curve_x, ice_curve_y, ls='-', c='black', alpha=alpha, linewidth=1)
+        #     axis.plot([], [], ls='-', c='black', label="ICE")
 
         axis.plot([], [], ls='-', c='red', label="PDP")
 
-        axis.plot(mean_x, mean_y, ls='-', c='red', alpha=1., linewidth=5)
+        axis.plot(self.pdp_values_x, self.pdp_values_y, ls='-', c='red', alpha=1., linewidth=5)
 
         # draw data distribution axis
+        print("distribution axis")
         x_data, _ = self._storage.get_data()
         feature_values = list(pd.DataFrame(x_data)[self.pdp_feature].values[idx])
         if n_ice_curves_prop < 1:
-            feature_values.append(np.min(mean_x))
-            feature_values.append(np.max(mean_x))
+            feature_values.append(np.min(self.pdp_values_x))
+            feature_values.append(np.max(self.pdp_values_x))
         for x_value in feature_values:
             dist_axis.axvline(x_value, c="black", alpha=0.2)
+        print("end distribution axis")
 
         axis.set_title(title)
         axis.set_ylim((y_min, y_max))
